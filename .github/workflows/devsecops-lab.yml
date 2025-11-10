@@ -28,7 +28,7 @@ jobs:
           trivy --version
 
       - name: Run Trivy scan (CRITICAL)
-        # '|| true' pour que le job reste vert même si vulnérabilités
+        # ⚠️ Important : '|| true' pour que le job reste vert même si Trivy trouve des vulnérabilités
         run: trivy image --severity CRITICAL --format json -o trivy-report.json trivy-lab-image:latest || true
 
       - name: Show CRITICAL vulnerabilities
