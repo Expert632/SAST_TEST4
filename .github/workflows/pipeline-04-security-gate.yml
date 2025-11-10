@@ -1,23 +1,45 @@
 name: Pipeline 04 - Security Gate
 
 on:
-  workflow_run:
-    workflows: ["Pipeline 02 - SAST Scan"]
-    types:
-      - completed
+  push:
+    branches:
+      - main
 
 jobs:
   security-gate:
     runs-on: ubuntu-latest
+
     steps:
+      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check for critical vulnerabilities
+      # 2️⃣ Installer jq pour parser JSON
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      # 3️⃣ Vérifier que le rapport SAST existe
+      - name: Verify SAST Report
         run: |
-          if grep -q '"Severity":"CRITICAL"' reports/sast-report.json; then
-            echo "🚨 Critical vulnerability detected!"
+          REPORT_FILE="reports/sast-report.json"
+          if [ ! -f "$REPORT_FILE" ]; then
+            echo "⚠️ Report file not found! Failing pipeline..."
+            exit 1
+          fi
+
+      # 4️⃣ Security Gate: fail if CRITICAL vulnerability exists
+      - name: Check for Critical Vulnerabilities
+        run: |
+          REPORT_FILE="reports/sast-report.json"
+
+          # Compter les vulnérabilités critiques
+          CRITICAL_COUNT=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' $REPORT_FILE)
+
+          echo "Found $CRITICAL_COUNT critical vulnerabilities"
+
+          if [ "$CRITICAL_COUNT" -ge 1 ]; then
+            echo "❌ Critical vulnerabilities detected! Pipeline failing..."
             exit 1
           else
-            echo "✅ No critical vulnerabilities detected."
+            echo "✅ No critical vulnerabilities found. Pipeline green."
           fi
