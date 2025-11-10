@@ -71,7 +71,6 @@ with open("trivy-report.json") as f:
 
 critical_vulns = []
 
-# Collecte toutes les vulnérabilités CRITICAL
 for result in data.get("Results", []):
     vulns = result.get("Vulnerabilities", []) if result.get("Vulnerabilities") else []
     for v in vulns:
@@ -87,9 +86,8 @@ else:
         version = v['InstalledVersion']
         vuln_id = v['VulnerabilityID']
 
-        # Simulation de remediation
         remediation = f"Update {package} from {version} to latest patched version"
-        success = True  # pour le lab, on simule succès
+        success = True  # Simulation de succès
 
         print(f"Vulnérabilité: {vuln_id}")
         print(f"Package: {package}:{version}")
@@ -98,6 +96,5 @@ else:
         print("-"*40)
 
     print(f"Résumé: {len(critical_vulns)} vulnérabilités CRITICAL détectées et remédiées.")
-    # Échec du job pour simuler la gate si vulnérabilités détectées
     raise SystemExit("❌ Pipeline échoué : Vulnérabilités CRITICAL détectées !")
 PY
