@@ -1,0 +1,23 @@
+name: Pipeline 04 - Security Gate
+
+on:
+  workflow_run:
+    workflows: ["Pipeline 02 - SAST Scan"]
+    types:
+      - completed
+
+jobs:
+  security-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for critical vulnerabilities
+        run: |
+          if grep -q '"Severity":"CRITICAL"' reports/sast-report.json; then
+            echo "🚨 Critical vulnerability detected!"
+            exit 1
+          else
+            echo "✅ No critical vulnerabilities detected."
+          fi
