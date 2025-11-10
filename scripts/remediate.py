@@ -17,11 +17,12 @@ for result in data.get("Results", []):
         if v.get("Severity", "").upper() == "CRITICAL":
             critical_vulns.append(v)
 
+# ✅ Pipeline vert si aucune vulnérabilité
 if not critical_vulns:
     print("✅ Aucune vulnérabilité CRITICAL détectée. Pipeline OK !")
     sys.exit(0)  # exit code 0 → pipeline vert
 
-# Si on a des vulnérabilités critiques, on simule la remédiation
+# 🚧 Si vulnérabilités détectées → remédiation simulée
 print("🚧 Début de la remédiation automatique simulée :\n")
 for v in critical_vulns:
     pkg = v.get("PkgName", "N/A")
@@ -35,4 +36,4 @@ for v in critical_vulns:
     print("-" * 60)
 
 print(f"Résumé: {len(critical_vulns)} vulnérabilité(s) CRITICAL remédiée(s) (simulation).")
-sys.exit(1)  # exit code 1 → pipeline rouge uniquement si vulnérabilités
+sys.exit(1)  # pipeline rouge uniquement si vulnérabilités
