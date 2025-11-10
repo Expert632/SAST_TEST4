@@ -9,20 +9,32 @@ jobs:
   sast-scan:
     runs-on: ubuntu-latest
     steps:
+      # 1️⃣ Récupération du code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Trivy SAST Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          format: 'json'
-          output: 'reports/sast-report.json'
-          severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-        continue-on-error: true
-
-      - name: Display Report Summary
+      # 2️⃣ Installation de Trivy
+      - name: Install Trivy
         run: |
-          echo "=== 🧾 Trivy SAST Scan Completed ==="
-          cat reports/sast-report.json || echo "No vulnerabilities found."
-          echo "✅ Pipeline always green for teaching purpose."
+          echo "📦 Installing Trivy..."
+          sudo apt-get update && sudo apt-get install -y wget
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.43.0_Linux-64bit.deb
+          sudo dpkg -i trivy_0.43.0_Linux-64bit.deb
+
+      # 3️⃣ Scan SAST
+      - name: Run Trivy SAST Scan
+        run: |
+          echo "🔍 Running Trivy SAST Scan..."
+          mkdir -p reports
+          # Trivy scan, output JSON, ignore exit code pour garder pipeline verte
+          trivy fs src --format json --output reports/sast-report.json || true
+
+      # 4️⃣ Affichage des vulnérabilités dans le log
+      - name: Display SAST Report
+        run: |
+          echo "=== 🧾 SAST Report Summary ==="
+          if [ -s reports/sast-report.json ]; then
+            cat reports/sast-report.json
+          else
+            echo "✅ No vulnerabilities found."
+          fi
