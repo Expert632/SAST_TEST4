@@ -2,7 +2,8 @@ name: DevSecOps Lab - Trivy Scan & Auto-Remediation
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -10,91 +11,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repo
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # 2️⃣ Build Docker image
       - name: Build Docker image
         run: |
           docker build -t trivy-lab-image:latest .
 
-      # 3️⃣ Installer Trivy
       - name: Install Trivy
         run: |
-          wget -q https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.43.1_Linux-64bit.deb -O /tmp/trivy.deb
+          wget -q https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.52.1_Linux-64bit.deb -O /tmp/trivy.deb
           sudo dpkg -i /tmp/trivy.deb
           trivy --version
 
-      # 4️⃣ Trivy scan CRITICAL
       - name: Run Trivy scan (CRITICAL)
         run: |
           trivy image --severity CRITICAL --format json -o trivy-report.json trivy-lab-image:latest || true
 
-      # 5️⃣ Affichage de toutes les vulnérabilités CRITICAL
       - name: Show all CRITICAL vulnerabilities
         run: |
-          python3 - <<'PY'
-import json
+          python3 scripts/show_vulns.py
 
-with open("trivy-report.json") as f:
-    data = json.load(f)
-
-critical_vulns = []
-
-for result in data.get("Results", []):
-    vulns = result.get("Vulnerabilities", []) if result.get("Vulnerabilities") else []
-    for v in vulns:
-        if v.get("Severity", "").upper() == "CRITICAL":
-            critical_vulns.append(v)
-            print(f"ID: {v['VulnerabilityID']}")
-            print(f"Package: {v['PkgName']}:{v['InstalledVersion']}")
-            print(f"Severity: {v['Severity']}")
-            print(f"Title: {v.get('Title','')}")
-            print(f"URL: {v.get('PrimaryURL','')}")
-            print("-" * 40)
-
-if not critical_vulns:
-    print("✅ Aucune vulnérabilité CRITICAL détectée.")
-else:
-    print(f"Total CRITICAL vulnerabilities: {len(critical_vulns)}")
-PY
-
-      # 6️⃣ Remediation automatique simulée
       - name: Auto-Remediation of CRITICAL vulnerabilities
         run: |
-          python3 - <<'PY'
-import json
-
-with open("trivy-report.json") as f:
-    data = json.load(f)
-
-critical_vulns = []
-
-for result in data.get("Results", []):
-    vulns = result.get("Vulnerabilities", []) if result.get("Vulnerabilities") else []
-    for v in vulns:
-        if v.get("Severity", "").upper() == "CRITICAL":
-            critical_vulns.append(v)
-
-if not critical_vulns:
-    print("✅ Aucune vulnérabilité CRITICAL à remédier.")
-else:
-    print("🚨 Début de la remédiation automatique simulée")
-    for v in critical_vulns:
-        package = v['PkgName']
-        version = v['InstalledVersion']
-        vuln_id = v['VulnerabilityID']
-
-        remediation = f"Update {package} from {version} to latest patched version"
-        success = True  # Simulation de succès
-
-        print(f"Vulnérabilité: {vuln_id}")
-        print(f"Package: {package}:{version}")
-        print(f"Remediation appliquée: {remediation}")
-        print(f"Résultat: {'✅ Succès' if success else '❌ Échec'}")
-        print("-"*40)
-
-    print(f"Résumé: {len(critical_vulns)} vulnérabilités CRITICAL détectées et remédiées.")
-    raise SystemExit("❌ Pipeline échoué : Vulnérabilités CRITICAL détectées !")
-PY
+          python3 scripts/remediate.py
