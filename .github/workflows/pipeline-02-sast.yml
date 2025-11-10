@@ -27,7 +27,7 @@ jobs:
           echo "🔍 Running Trivy SAST Scan..."
           mkdir -p reports
           # Trivy scan, output JSON, ignore exit code pour garder pipeline verte
-          trivy fs src --format json --output reports/sast-report.json || true
+          trivy fs ./src --format json --output reports/sast-report.json || true
 
       # 4️⃣ Affichage des vulnérabilités dans le log
       - name: Display SAST Report
