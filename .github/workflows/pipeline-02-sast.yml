@@ -24,27 +24,21 @@ jobs:
             mkdir -p src
           fi
 
-      # 3️⃣ Installer Trivy
-      - name: Install Trivy
-        run: |
-          echo "📦 Installing Trivy..."
-          sudo apt-get update -y
-          sudo apt-get install -y wget
-          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.43.0_Linux-64bit.deb
-          sudo dpkg -i trivy_0.43.0_Linux-64bit.deb
-
-      # 4️⃣ Fix permissions pour éviter exit code 8
+      # 3️⃣ Fix permissions pour éviter les erreurs de scan
       - name: Fix permissions
         run: chmod -R 755 src
 
-      # 5️⃣ Scan SAST avec Trivy (toujours vert)
+      # 4️⃣ Run Trivy via l’Action officielle (installation + scan)
       - name: Run Trivy SAST Scan
-        run: |
-          echo "🔍 Running Trivy SAST Scan..."
-          mkdir -p reports
-          trivy fs ./src --format json --output reports/sast-report.json || true
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          format: json
+          output: reports/sast-report.json
+          severity: CRITICAL,HIGH,MEDIUM,LOW
+        continue-on-error: true
 
-      # 6️⃣ Affichage du rapport
+      # 5️⃣ Affichage du rapport dans le log
       - name: Display SAST Report
         run: |
           echo "=== 🧾 SAST Report Summary ==="
