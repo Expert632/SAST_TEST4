@@ -1,0 +1,42 @@
+name: Pipeline 03 - Auto Remediation
+
+on:
+  workflow_dispatch:   # lancement manuel
+  workflow_call:       # ou appel depuis un autre pipeline
+
+jobs:
+  auto-remediate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install --upgrade pip
+
+      # --- Étape 1 : Remédiation automatique ---
+      - name: Run auto remediation script
+        run: |
+          echo "🚀 Launching automatic remediation..."
+          python scripts/auto_remediate.py
+
+      # --- Étape 2 : Générer le rapport de synthèse CVE ---
+      - name: Generate remediation summary report
+        run: |
+          echo "📊 Analyzing before/after SAST reports..."
+          python scripts/remediation_report.py
+
+      # --- Étape 3 : Upload des logs et rapports ---
+      - name: Upload remediation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: remediation-artifacts
+          path: |
+            scripts/
+            sast-reports/remediation-summary.txt
