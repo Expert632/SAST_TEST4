@@ -10,28 +10,28 @@ jobs:
     name: Syntax & Lint (always green)
     runs-on: ubuntu-latest
     steps:
+      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install linters
+      # 3️⃣ Install linters
+      - name: Install flake8
         run: |
           python -m pip install --upgrade pip
           pip install flake8
 
-      - name: Run flake8 and produce TXT report (do not fail job)
-        # This step intentionally never fails the job; all output is captured in flake8-report.txt
+      # 4️⃣ Run flake8 and produce TXT report (always green)
+      - name: Run flake8 and generate TXT report
         run: |
-          # run flake8 and capture output
           mkdir -p sast-reports
           echo "=== flake8 lint run ===" > sast-reports/flake8-report.txt
-          # Run flake8; redirect stdout+stderr to the report but keep non-zero exit from flake8 from breaking the job
           flake8 src >> sast-reports/flake8-report.txt 2>&1 || true
-          # Add a short summary line so it's obvious in the artifact whether there were findings
           if [ -s sast-reports/flake8-report.txt ]; then
             echo "" >> sast-reports/flake8-report.txt
             echo "== SUMMARY: Lint outputs present (see details above) ==" >> sast-reports/flake8-report.txt
@@ -39,14 +39,21 @@ jobs:
             echo "== SUMMARY: No lint issues detected ==" >> sast-reports/flake8-report.txt
           fi
 
-      - name: Print short preview in logs
+      # 5️⃣ Preview first 200 lines in logs
+      - name: Print short preview of report
         run: |
           echo "---- preview of flake8 report ----"
           sed -n '1,200p' sast-reports/flake8-report.txt || true
           echo "---- end preview ----"
 
+      # 6️⃣ Upload artifact (TXT)
       - name: Upload lint report artifact
         uses: actions/upload-artifact@v4
         with:
           name: flake8-report
           path: sast-reports/flake8-report.txt
+
+      # 7️⃣ Run interpretation Python script
+      - name: Run interpretation script (summary in logs)
+        run: |
+          python scripts/interpret_report.py
