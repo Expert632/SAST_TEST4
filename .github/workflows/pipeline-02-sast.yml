@@ -13,42 +13,53 @@ jobs:
   sast_scan:
     runs-on: ubuntu-latest
     steps:
-      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Installer Python + Semgrep
-      - name: Setup Python + Semgrep
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Semgrep and jq
         run: |
           python -m pip install --upgrade pip
           pip install semgrep jq
 
-      # 3️⃣ Créer dossier rapport
       - name: Create report folder
-        run: mkdir -p sast-reports
-
-      # 4️⃣ Lancer Semgrep scan et générer JSON + TXT
-      - name: Run Semgrep SAST Scan
         run: |
-          # Scan automatique
-          semgrep --config auto --json --output sast-reports/semgrep-report.json || true
-          # Créer TXT avec résumé simple
-          jq -r '.results[]? | "[" + (.extra.severity // "UNKNOWN") + "] " + .check_id + " -- " + (.extra.message // "")' sast-reports/semgrep-report.json > sast-reports/semgrep-report.txt || true
+          mkdir -p sast-reports
 
-      # 5️⃣ Affichage court du TXT
-      - name: Preview report TXT
+      - name: Run Semgrep (custom rules + auto) and produce JSON
         run: |
-          echo "---- preview semgrep-report.txt ----"
-          head -n 20 sast-reports/semgrep-report.txt || true
-          echo "-----------------------------------"
+          # Run semgrep with your custom rule file and the auto rules.
+          # Use || true so the step never fails the job (lab is always green).
+          semgrep --config semgrep-rules/critical_deserialization.yml --config auto --json --output sast-reports/semgrep-report.json . || true
 
-      # 6️⃣ Upload artefacts
+      - name: Produce simple TXT summary from JSON (for quick preview)
+        run: |
+          # Convert results to a readable TXT (severity, check_id, message, path:line)
+          jq -r '.results[]? | "[" + (.extra.severity // "UNKNOWN") + "] " + (.check_id // "no-check-id") + " -- " + (.extra.message // "") + " (" + (.path // "unknown") + ":" + ((.start.line|tostring) // "?") + ")"' sast-reports/semgrep-report.json > sast-reports/semgrep-report.txt || true
+
+      - name: Preview TXT (top 40 lines)
+        run: |
+          echo "---- semgrep-report.txt preview ----"
+          head -n 40 sast-reports/semgrep-report.txt || true
+          echo "------------------------------------"
+
       - name: Upload Semgrep report artifacts
         uses: actions/upload-artifact@v4
         with:
           name: semgrep-report
           path: sast-reports/
 
-      # 7️⃣ Interprétation avec script Python
-      - name: Run interpretation script (summary in logs)
-        run: python scripts/interpret_sast_report.py
+      - name: Run interpretation script (English summary + CVE list for critical/high)
+        run: |
+          # Run the interpreter script that prints either:
+          #  "✅ No critical vulnerabilities detected." or
+          #  "❌ Critical vulnerability detected:" followed by list of CVE IDs.
+          python scripts/interpret_sast_report.py || true
+
+      - name: Final short log note
+        run: |
+          echo "Pipeline 02 completed (always green for the lab). Check 'semgrep-report' artifact for full JSON and TXT."
