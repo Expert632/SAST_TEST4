@@ -1,0 +1,9 @@
+{
+  "pickle.loads": "json.loads",
+  "pickle.load": "json.load",
+  "eval(": "# REMOVED eval() for security reasons - use safer alternative",
+  "debug=True": "debug=False",
+  "host='0.0.0.0'": "host='127.0.0.1'",
+  "execute(f\"SELECT": "# REPLACED with parameterized query",
+  "os.system": "# REMOVED os.system() - use subprocess.run() instead"
+}
