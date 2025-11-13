@@ -1,0 +1,18 @@
+# semgrep-rules/critical_deserialization.yml
+rules:
+  - id: python-insecure-deserialization-pickle
+    languages: [python]
+    message: "Insecure deserialization: using pickle.loads / pickle.load on untrusted data can lead to remote code execution."
+    severity: CRITICAL
+    metadata:
+      cve: "CVE-2025-0001"
+      cwe: "CWE-502"
+      tags: ["security", "rce", "insecure-deserialization"]
+    pattern-either:
+      - pattern: |
+          pickle.loads(...)
+      - pattern: |
+          pickle.load(...)
+    # optional: suggested mitigation text (informational)
+    fix: |
+      Avoid using pickle on untrusted input. Use safe serialization formats (JSON) or validate inputs prior to deserialization.
