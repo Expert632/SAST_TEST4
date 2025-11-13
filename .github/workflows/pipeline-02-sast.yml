@@ -1,54 +1,54 @@
-# scripts/interpret_sast_report.py
-"""
-Analyse le rapport SAST TXT (ou JSON) et affiche un résumé pédagogique :
-- Détecte les vulnérabilités critiques (Critical/High)
-- Affiche CVE si disponible
-"""
+name: Pipeline 02 - Active SAST Scan (Always Green)
 
-import json
-from pathlib import Path
+on:
+  push:
+    branches: ["main", "dev"]
+  pull_request:
 
-# Chemins des fichiers générés par Semgrep
-JSON_REPORT = Path("sast-reports/semgrep-report.json")
-TXT_REPORT = Path("sast-reports/semgrep-report.txt")
+permissions:
+  contents: read
+  security-events: write
 
-def interpret_semgrep_report(json_path: Path, txt_path: Path):
-    if not json_path.exists():
-        print(f"⚠️ Rapport JSON introuvable : {json_path}")
-        return
+jobs:
+  sast_scan:
+    runs-on: ubuntu-latest
+    steps:
+      # 1️⃣ Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    # Lire JSON
-    with json_path.open(encoding="utf-8") as f:
-        data = json.load(f)
+      # 2️⃣ Installer Python + Semgrep
+      - name: Setup Python + Semgrep
+        run: |
+          python -m pip install --upgrade pip
+          pip install semgrep jq
 
-    critical_vulns = []
-    for item in data.get("results", []):
-        severity = item.get("extra", {}).get("severity", "").lower()
-        check_id = item.get("check_id", "")
-        cve = item.get("extra", {}).get("cwe", "N/A")  # parfois Semgrep utilise CWE au lieu de CVE
-        path = item.get("path", "")
-        line = item.get("start", {}).get("line", "?")
-        if severity in ["critical", "high"]:
-            critical_vulns.append((path, line, check_id, cve, severity))
+      # 3️⃣ Créer dossier rapport
+      - name: Create report folder
+        run: mkdir -p sast-reports
 
-    # Affichage résumé
-    if not critical_vulns:
-        print("✅ Aucune vulnérabilité critique détectée.")
-    else:
-        print(f"❌ {len(critical_vulns)} vulnérabilité(s) critique(s) détectée(s) :")
-        for v in critical_vulns:
-            path, line, check_id, cve, severity = v
-            print(f"  - {severity.upper()} : {check_id} ({cve}) à {path} ligne {line}")
+      # 4️⃣ Lancer Semgrep scan et générer JSON + TXT
+      - name: Run Semgrep SAST Scan
+        run: |
+          # Scan automatique
+          semgrep --config auto --json --output sast-reports/semgrep-report.json || true
+          # Créer TXT avec résumé simple
+          jq -r '.results[]? | "[" + (.extra.severity // "UNKNOWN") + "] " + .check_id + " -- " + (.extra.message // "")' sast-reports/semgrep-report.json > sast-reports/semgrep-report.txt || true
 
-    # Afficher un aperçu du TXT
-    if txt_path.exists():
-        print("\n--- Aperçu du rapport TXT (top 20 lignes) ---")
-        with txt_path.open(encoding="utf-8") as f:
-            for i, line in enumerate(f):
-                if i >= 20:
-                    break
-                print(line.strip())
-        print("--- fin aperçu ---")
+      # 5️⃣ Affichage court du TXT
+      - name: Preview report TXT
+        run: |
+          echo "---- preview semgrep-report.txt ----"
+          head -n 20 sast-reports/semgrep-report.txt || true
+          echo "-----------------------------------"
 
-if __name__ == "__main__":
-    interpret_semgrep_report(JSON_REPORT, TXT_REPORT)
+      # 6️⃣ Upload artefacts
+      - name: Upload Semgrep report artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-report
+          path: sast-reports/
+
+      # 7️⃣ Interprétation avec script Python
+      - name: Run interpretation script (summary in logs)
+        run: python scripts/interpret_sast_report.py
