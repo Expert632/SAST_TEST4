@@ -54,7 +54,7 @@ jobs:
 
       # 8️⃣ Optional: upload reports as artifacts
       - name: Upload SAST reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: SAST Reports
           path: |
