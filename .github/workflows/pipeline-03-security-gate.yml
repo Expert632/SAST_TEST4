@@ -1,0 +1,37 @@
+name: Pipeline 03 - Security Gate
+
+on:
+  workflow_dispatch:  # Permet de lancer manuellement le pipeline
+
+jobs:
+  security-gate:
+    runs-on: ubuntu-latest
+    steps:
+
+      # ------------------------
+      # 1️⃣ Checkout repository
+      # ------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # ------------------------
+      # 2️⃣ Setup Python
+      # ------------------------
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # ------------------------
+      # 3️⃣ Install dependencies (if any)
+      # ------------------------
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+
+      # ------------------------
+      # 4️⃣ Run security gate script
+      # ------------------------
+      - name: Check for critical vulnerabilities
+        run: |
+          python scripts/security_gate.py
